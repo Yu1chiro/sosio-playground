@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Ujian</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gray-100">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Monitoring Sesi Ujian</h1>
+                <p class="text-gray-600 mt-1">Lihat status siswa secara real-time.</p>
+            </div>
+            <div class="mt-4 sm:mt-0 flex items-center space-x-4">
+                <a href="/dashboard" class="text-sm font-medium text-blue-600 hover:underline">&larr; Kembali ke Dashboard</a>
+                <div class="relative">
+                    <select id="classFilter" class="block appearance-none w-full sm:w-48 bg-white border border-gray-300 hover:border-gray-400 px-4 py-2 pr-8 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="semua">Semua Kelas</option>
+                        <option value="XII.H">XII.H</option>
+                        <option value="XII.I">XII.I</option>
+                        <option value="XII.J">XII.J</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Nama Siswa</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Kelas</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Absen</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sessionsTableBody" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                                Memuat data sesi...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const tableBody = document.getElementById('sessionsTableBody');
+    const classFilter = document.getElementById('classFilter');
+
+    async function fetchSessions() {
+        const selectedClass = classFilter.value;
+        const url = `/api/sessions?kelas=${selectedClass}`;
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Gagal memuat data sesi.');
+            const sessions = await response.json();
+            renderTable(sessions);
+        } catch (error) {
+            console.error(error);
+            tableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-red-500">Gagal memuat data: ${error.message}</td></tr>`;
+        }
+    }
+
+    function renderTable(sessions) {
+        if (sessions.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-gray-500">Tidak ada sesi aktif untuk kelas ini.</td></tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = '';
+        sessions.forEach(session => {
+            const statusBadge = session.status === 'blocked'
+                ? `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Diblokir</span>`
+                : `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Mengerjakan</span>`;
+
+            const actionButton = session.status === 'blocked'
+                ? `<button class="unblock-btn text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-md" data-absen="${session.student_absen}" data-kelas="${session.student_class}">Buka Blokir</button>`
+                : `<span class="text-sm text-gray-400">-</span>`;
+
+            const row = `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${session.student_name || 'Belum Submit'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.student_class}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${session.student_absen}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${actionButton}</td>
+                </tr>
+            `;
+            tableBody.insertAdjacentHTML('beforeend', row);
+        });
+    }
+
+    async function unblockStudent(absen, kelas) {
+        try {
+            const response = await fetch('/api/session/unblock', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_absen: absen, student_class: kelas })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: result.message,
+                timer: 1500,
+                showConfirmButton: false
+            });
+            fetchSessions();
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal',
+                text: error.message
+            });
+        }
+    }
+
+    tableBody.addEventListener('click', (e) => {
+        if (e.target.classList.contains('unblock-btn')) {
+            const absen = e.target.dataset.absen;
+            const kelas = e.target.dataset.kelas;
+            unblockStudent(absen, kelas);
+        }
+    });
+
+    classFilter.addEventListener('change', fetchSessions);
+
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchSessions();
+        setInterval(fetchSessions, 5000);
+    });
+
+</script>
+</body>
+</html>

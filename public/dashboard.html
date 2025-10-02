@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+<link rel="shortcut icon" href="https://6afuiqe8xb.ucarecd.net/278cf1a5-2273-4c27-89a9-b2f60b90e75d/shibainuwrittingonpapernoteillustrationsvgdownloadpng9803777.png" type="image/x-icon">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-100">
+
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+        <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white"></div>
+            <p class="text-white text-lg mt-4 font-semibold">Memproses...</p>
+        </div>
+    </div>
+
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex-shrink-0 flex items-center"><h1 class="text-xl font-bold">Dashboard Admin</h1></div>
+                <div class="flex items-center"><button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-600">Logout</button></div>
+            </div>
+        </div>
+    </nav>
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 id="formTitle" class="text-2xl font-bold mb-4">Tambah Soal Kuis Baru</h2>
+                <button onclick="window.location.href='/monitor'" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 flex items-center gap-2">
+                        Monitoring siswa
+                    </button>
+                <form id="addQuizForm" class="space-y-4">
+                    <input type="hidden" id="editQuizId">
+                    <input type="hidden" id="imageBase64" name="imageBase64">
+                    <input type="hidden" id="imageMimeType" name="imageMimeType">
+                    <div>
+                        <label for="question" class="block text-sm font-medium">Pertanyaan</label>
+                        <textarea id="question" rows="3" required class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
+                    </div>
+                    <div>
+                        <label for="image_file" class="block text-sm font-medium">Gambar (Opsional, max 2MB)</label>
+                        <input type="file" id="image_file" name="image_file" accept="image/png, image/jpeg" class="mt-1 block w-full text-sm text-gray-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-full file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-blue-50 file:text-blue-700
+                            hover:file:bg-blue-100
+                        "/>
+                        <div class="mt-2">
+                            <img id="image_preview" class="hidden w-32 h-32 object-cover rounded-md border" src="" alt="Preview">
+                            <button type="button" id="removeImageBtn" class="hidden mt-2 text-sm bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Hapus Gambar</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4">
+                        <input type="text" id="option_a" placeholder="Pilihan A" required class="w-full border p-2 rounded-md">
+                        <input type="text" id="option_b" placeholder="Pilihan B" required class="w-full border p-2 rounded-md">
+                        <input type="text" id="option_c" placeholder="Pilihan C" required class="w-full border p-2 rounded-md">
+                        <input type="text" id="option_d" placeholder="Pilihan D" required class="w-full border p-2 rounded-md">
+                        <input type="text" id="option_e" placeholder="Pilihan E" required class="w-full border p-2 rounded-md">
+                    </div>
+                    <div>
+                        <label for="correct_answer" class="block text-sm font-medium">Jawaban Benar</label>
+                        <select id="correct_answer" required class="mt-1 block w-full border p-2 bg-white rounded-md">
+                            <option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option><option value="e">E</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="submitBtn" type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700">Simpan Soal</button>
+                        <button id="cancelBtn" type="button" class="hidden w-full bg-gray-500 text-white py-2 rounded-md hover:bg-gray-600">Batal</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-2xl font-bold mb-4">Daftar Soal</h2>
+                <div id="quizList" class="space-y-4 max-h-[500px] overflow-y-auto pr-2"></div>
+            </div>
+
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow mt-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                 <h2 class="text-2xl font-bold">Hasil Jawaban Siswa</h2>
+                <div class="flex items-center gap-3">
+                    <div>
+                        <label for="classFilter" class="text-sm font-medium mr-2 text-gray-700">Filter per Kelas:</label>
+                        <select id="classFilter" class="border border-gray-300 rounded-md p-2 bg-white text-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="semua">Semua Kelas</option>
+                            <option value="XII.H">XII.H</option>
+                            <option value="XII.I">XII.I</option>
+                            <option value="XII.J">XII.J</option>
+                        </select>
+                    </div>
+                    <button id="downloadBtn" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Download
+                    </button>
+                    
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Absen</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kelas</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nilai</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="submissionsTable" class="bg-white divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const quizForm = document.getElementById('addQuizForm');
+        const quizList = document.getElementById('quizList');
+        const submissionsTable = document.getElementById('submissionsTable');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const formTitle = document.getElementById('formTitle');
+        const submitBtn = document.getElementById('submitBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const editQuizIdInput = document.getElementById('editQuizId');
+        const classFilter = document.getElementById('classFilter');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const imageFileInput = document.getElementById('image_file');
+        const imagePreview = document.getElementById('image_preview');
+        const removeImageBtn = document.getElementById('removeImageBtn');
+        const imageBase64Input = document.getElementById('imageBase64');
+        const imageMimeTypeInput = document.getElementById('imageMimeType');
+
+        let allQuizzes = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadQuizzes();
+            loadSubmissions();
+        });
+        
+        classFilter.addEventListener('change', () => loadSubmissions(classFilter.value));
+        downloadBtn.addEventListener('click', downloadExcel);
+        cancelBtn.addEventListener('click', cancelEdit);
+
+        imageFileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > 2 * 1024 * 1024) {
+                Swal.fire('Ukuran File Terlalu Besar', 'Ukuran gambar tidak boleh lebih dari 2MB.', 'error');
+                imageFileInput.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const dataUrl = e.target.result;
+                imagePreview.src = dataUrl;
+                imagePreview.classList.remove('hidden');
+                removeImageBtn.classList.remove('hidden');
+
+                const parts = dataUrl.split(',');
+                const mimeType = parts[0].match(/:(.*?);/)[1];
+                const base64Data = parts[1];
+
+                imageBase64Input.value = base64Data;
+                imageMimeTypeInput.value = mimeType;
+            };
+            reader.onerror = (error) => {
+                console.error("FileReader error:", error);
+                Swal.fire('Error', 'Gagal membaca file.', 'error');
+            };
+            reader.readAsDataURL(file);
+        });
+
+        removeImageBtn.addEventListener('click', () => {
+            imageFileInput.value = '';
+            imagePreview.src = '';
+            imagePreview.classList.add('hidden');
+            removeImageBtn.classList.add('hidden');
+            imageBase64Input.value = '';
+            imageMimeTypeInput.value = '';
+        });
+
+        async function downloadExcel() {
+            const selectedClass = classFilter.value;
+            const className = selectedClass === 'semua' ? 'Semua Kelas' : selectedClass;
+            const url = `/api/submissions?kelas=${encodeURIComponent(selectedClass)}`;
+            const response = await fetch(url);
+            const submissions = await response.json();
+
+            if (submissions.length === 0) {
+                Swal.fire('Tidak Ada Data', `Tidak ada data nilai untuk ${className} yang bisa diunduh.`, 'warning');
+                return;
+            }
+
+            const dataForExcel = submissions.map(s => {
+                const date = new Date(s.submitted_at);
+                const formattedDate = `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+                return {
+                    "Tanggal Pengerjaan": formattedDate, "Nama Siswa": s.student_name, "No. Absen": s.student_absen,
+                    "Kelas": s.student_class, "Nilai": s.score,
+                };
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Nilai Siswa");
+
+            const colWidths = Object.keys(dataForExcel[0]).map(key => ({
+                wch: Math.max(key.length, ...dataForExcel.map(row => (row[key] || "").toString().length)) + 2
+            }));
+            worksheet["!cols"] = colWidths;
+
+            const fileName = `Nilai_Quiz_${className.replace(/\./g, '')}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            XLSX.writeFile(workbook, fileName);
+        }
+
+        function handleEdit(quizId) {
+            const quizToEdit = allQuizzes.find(q => q.id === quizId);
+            if (!quizToEdit) return;
+
+            formTitle.textContent = 'Edit Soal Kuis';
+            submitBtn.textContent = 'Update Soal';
+            cancelBtn.classList.remove('hidden');
+            
+            editQuizIdInput.value = quizToEdit.id;
+            quizForm.question.value = quizToEdit.question;
+
+            if (quizToEdit.image_base64 && quizToEdit.image_mimetype) {
+                const dataUrl = `data:${quizToEdit.image_mimetype};base64,${quizToEdit.image_base64}`;
+                imagePreview.src = dataUrl;
+                imagePreview.classList.remove('hidden');
+                removeImageBtn.classList.remove('hidden');
+                imageBase64Input.value = quizToEdit.image_base64;
+                imageMimeTypeInput.value = quizToEdit.image_mimetype;
+            }
+            
+            quizForm.option_a.value = quizToEdit.options.a;
+            quizForm.option_b.value = quizToEdit.options.b;
+            quizForm.option_c.value = quizToEdit.options.c;
+            quizForm.option_d.value = quizToEdit.options.d;
+            quizForm.option_e.value = quizToEdit.options.e;
+            quizForm.correct_answer.value = quizToEdit.correct_answer;
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            formTitle.textContent = 'Tambah Soal Kuis Baru';
+            submitBtn.textContent = 'Simpan Soal';
+            cancelBtn.classList.add('hidden');
+            editQuizIdInput.value = '';
+            quizForm.reset();
+            removeImageBtn.click();
+        }
+
+        async function loadQuizzes() {
+            const response = await fetch('/api/quizzes');
+            allQuizzes = await response.json();
+            quizList.innerHTML = allQuizzes.map((q, i) => {
+                const imageSrc = q.image_base64 && q.image_mimetype 
+                    ? `data:${q.image_mimetype};base64,${q.image_base64}` 
+                    : '';
+                const imageTag = imageSrc 
+                    ? `<img src="${imageSrc}" alt="Gambar Soal" class="w-24 h-24 object-cover rounded-md mb-2">` 
+                    : '';
+
+                return `
+                <div class="border p-3 rounded-md flex justify-between items-start gap-4">
+                    <div class="flex-grow">
+                        ${imageTag}
+                        <p class="font-semibold">${i + 1}. ${q.question}</p>
+                        <small class="text-green-600">Jawaban: ${q.correct_answer.toUpperCase()}</small>
+                    </div>
+                    <div class="flex flex-col gap-2 flex-shrink-0">
+                        <button onclick="handleEdit(${q.id})" class="text-sm bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Edit</button>
+                        <button onclick="deleteQuiz(${q.id})" class="text-sm bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Hapus</button>
+                    </div>
+                </div>`;
+            }).join('') || '<p class="text-gray-500">Belum ada soal.</p>';
+        }
+
+        async function loadSubmissions(filterKelas = 'semua') {
+            const url = `/api/submissions?kelas=${encodeURIComponent(filterKelas)}`;
+            const response = await fetch(url);
+            const submissions = await response.json();
+            
+            submissionsTable.innerHTML = submissions.map(s => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">${s.student_name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${s.student_absen}</td>
+                    <td class="px-6 py-4 whitespace-nowrap font-bold">${s.student_class}</td>
+                    <td class="px-6 py-4 whitespace-nowrap font-bold text-blue-600">${s.score}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <button onclick="deleteSubmission(${s.student_absen}, '${s.student_class}')" class="bg-red-500 text-white px-3 py-2 rounded text-sm font-semibold hover:bg-red-600">Hapus</button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="text-center py-4 text-gray-500">Tidak ada data.</td></tr>';
+        }
+
+        quizForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loadingOverlay.classList.remove('hidden');
+
+            const quizId = editQuizIdInput.value;
+            const isEditing = !!quizId;
+            
+            const payload = {
+                question: e.target.question.value,
+                options: { 
+                    a: e.target.option_a.value, b: e.target.option_b.value, 
+                    c: e.target.option_c.value, d: e.target.option_d.value, 
+                    e: e.target.option_e.value 
+                },
+                correct_answer: e.target.correct_answer.value,
+                image_base64: imageBase64Input.value || null,
+                image_mimetype: imageMimeTypeInput.value || null
+            };
+
+            const url = isEditing ? `/api/quizzes/${quizId}` : '/api/quizzes';
+            const method = isEditing ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, { 
+                    method: method, 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload) 
+                });
+
+                if (response.ok) {
+                    Swal.fire('Berhasil!', `Soal berhasil ${isEditing ? 'diperbarui' : 'disimpan'}.`, 'success');
+                    cancelEdit();
+                    loadQuizzes();
+                } else {
+                    const errData = await response.json();
+                    throw new Error(errData.message || 'Gagal menyimpan soal.');
+                }
+            } catch (error) {
+                 Swal.fire('Gagal', `Terjadi kesalahan: ${error.message}`, 'error');
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        });
+
+        async function deleteQuiz(id) {
+            const result = await Swal.fire({
+                title: 'Anda yakin?', text: "Soal ini akan dihapus permanen!", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, hapus!', cancelButtonText: 'Batal'
+            });
+            if (result.isConfirmed) {
+                await fetch(`/api/quizzes/${id}`, { method: 'DELETE' });
+                loadQuizzes();
+                Swal.fire('Dihapus!', 'Soal telah berhasil dihapus.', 'success');
+            }
+        }
+        
+        async function deleteSubmission(absen, kelas) {
+            const result = await Swal.fire({
+                title: 'Anda yakin?', text: `Hapus nilai siswa absen ${absen} dari kelas ${kelas}?`, icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, hapus!', cancelButtonText: 'Batal'
+            });
+            if (result.isConfirmed) {
+                await fetch(`/api/submissions/${absen}/${kelas}`, { method: 'DELETE' });
+                loadSubmissions(classFilter.value);
+                Swal.fire('Dihapus!', 'Nilai siswa telah dihapus.', 'success');
+            }
+        }
+        
+        logoutBtn.addEventListener('click', async () => {
+            const response = await fetch('/api/logout', { method: 'POST' });
+            const result = await response.json();
+            if(result.success) {
+                window.location.href = result.redirectUrl;
+            }
+        });
+    </script>
+</body>
+</html>

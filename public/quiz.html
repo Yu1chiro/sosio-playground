@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Playground</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="shortcut icon" href="https://6afuiqe8xb.ucarecd.net/278cf1a5-2273-4c27-89a9-b2f60b90e75d/shibainuwrittingonpapernoteillustrationsvgdownloadpng9803777.png" type="image/x-icon">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'academic-blue': '#1e40af',
+                        'academic-dark-blue': '#1e3a8a',
+                        'academic-light-blue': '#dbeafe',
+                        'academic-yellow': '#fbbf24',
+                        'academic-dark-yellow': '#f59e0b',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .animate-fade-in { animation: fadeIn 0.5s ease-in-out; } 
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .no-copy {
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 font-sans min-h-screen">
+    <div id="cheatOverlay" class="fixed inset-0 bg-black z-[9999] flex-col items-center justify-center text-center p-4 text-white hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-red-500 mb-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+        </svg>
+        <h2 class="text-3xl font-bold text-red-400 mb-2">ACCESS DENIED!</h2>
+        <p class="text-sm max-w-lg">Anda Terdeteksi Melakukan Browsing! <br>
+        Pengurangan point diberikan berdasarkan jumlah pelanggaran yg anda lakukan <br> Melakukan refresh pada halaman ini dapat mereset progress quiz anda 
+        <br> Silahkan hubungi admin untuk membuka akses
+        </p>
+    </div>
+
+    <div id="loadingScreen" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="flex justify-center mb-5">
+            <img src="https://ucarecdn.com/7eb6922c-3af7-47fd-956a-4d230098303a/unnamed.png" width="100px" height="auto" class="rounded-full" alt="">
+        </div>
+        <h2 class="text-2xl font-bold text-academic-blue mb-2">Hello There！</h2>
+        <p class="text-gray-600">Loading...</p>
+        <div class="mt-6 w-64 h-2 bg-gray-200 rounded-full overflow-hidden"><div id="loadingBar" class="h-full bg-academic-blue rounded-full w-0 transition-all duration-1000"></div></div>
+    </div>
+
+    <div id="identityModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-40 p-4 opacity-0 transition-opacity duration-300 scale-95">
+        <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-transform duration-300">
+            <div class="text-center mb-2">
+                <div class="flex justify-center mb-5">
+                    <img class="rounded-full" src="https://ucarecdn.com/7eb6922c-3af7-47fd-956a-4d230098303a/unnamed.png" width="80px" height="auto" alt="">
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">Sosio playground</h2>
+                <p class="text-sm text-gray mb-2">Silahkan isi identitas</p>
+                <p id="modalError" class="text-red-500 text-sm text-center mt-2 mb-3"></p>
+            </div>
+            <form id="identityForm" class="space-y-5 mt-6">
+                <div>
+                    <label for="student_name" class="block text-sm font-semibold text-gray-700 mb-2">Nama Lengkap</label>
+                    <input type="text" id="student_name" required class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-academic-blue" placeholder="Masukkan nama lengkap">
+                </div>
+                <div>
+                    <label for="student_absen" class="block text-sm font-semibold text-gray-700 mb-2">Nomor Absen</label>
+                    <input type="number" id="student_absen" required class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-academic-blue" placeholder="Masukkan nomor absen">
+                </div>
+                <div>
+                    <label for="student_class" class="block text-sm font-semibold text-gray-700 mb-2">Kelas</label>
+                    <select id="student_class" required class="w-full px-4 py-3 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-academic-blue appearance-none">
+                        <option value="" disabled selected>Pilih kelas</option>
+                        <option value="XI.E">XI.E</option>
+                        <option value="X.B">X.B</option>
+                        <option value="X.J">X.J</option>
+                    </select>
+                </div>
+                <button type="submit" id="submitIdentity" class="w-full bg-gradient-to-r from-academic-blue to-academic-dark-blue text-white py-3 rounded-lg font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center"><span>Mulai Quiz</span></button>
+            </form>
+        </div>
+    </div>
+
+    <div id="quizContainer" class="hidden container mx-auto p-4 md:p-8 max-w-3xl no-copy">
+        <div class="bg-white p-6 md:p-8 rounded-xl shadow-xl">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-4 border-b border-gray-200">
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-800">日本語クイズ</h1>
+                    <p class="text-gray-600 text-sm mt-1">がんばってください！</p>
+                </div>
+                <div class="mt-2 md:mt-0 flex items-center">
+                    <div class="bg-academic-light-blue text-academic-blue px-3 py-1 rounded-full text-sm font-medium"><span id="studentClassDisplay"></span></div>
+                    <div class="ml-3 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium"><span id="studentNameDisplay"></span></div>
+                </div>
+            </div>
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-2"><span class="text-sm font-semibold text-gray-600">Progress</span><span id="progressText" class="text-sm font-semibold text-academic-blue">Soal 0 dari 0</span></div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5"><div id="progressBar" class="bg-gradient-to-r from-academic-blue to-academic-dark-blue h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div></div>
+            </div>
+            <div id="questionArea" class="min-h-[300px]"></div>
+            <div class="mt-8 flex justify-between items-center pt-6 border-t border-gray-200">
+                <div class="flex items-center text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span id="timerDisplay">00:00</span></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="resultContainer" class="hidden text-center container mx-auto p-4 md:p-8 max-w-4xl">
+        <div class="bg-white p-8 md:p-12 rounded-xl shadow-xl">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 text-green-600 mb-6"><svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Quiz Selesai!</h1>
+            <p class="text-lg text-gray-600 mb-6">Terima kasih <strong id="resultName" class="text-academic-blue"></strong> telah berpartisipasi.</p>
+            <div class="bg-gradient-to-br from-academic-blue to-academic-dark-blue text-white p-8 rounded-xl max-w-md mx-auto mb-8 shadow-lg">
+                <p class="text-sm uppercase tracking-wider opacity-80">Nilai Akhir Anda</p>
+                <p id="resultScore" class="text-5xl md:text-6xl font-extrabold my-3">0</p>
+                <div class="w-full bg-white bg-opacity-20 rounded-full h-2.5 mt-4"><div id="scoreBar" class="bg-white h-2.5 rounded-full transition-all duration-1000" style="width: 0%"></div></div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+                <a href="/statistik" class="inline-flex items-center justify-center bg-gray-100 text-gray-800 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-all duration-200">Lihat statistik</a>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const loadingScreen = document.getElementById('loadingScreen'), loadingBar = document.getElementById('loadingBar');
+    const identityModal = document.getElementById('identityModal'), identityForm = document.getElementById('identityForm'), modalError = document.getElementById('modalError');
+    const quizContainer = document.getElementById('quizContainer'), resultContainer = document.getElementById('resultContainer');
+    const questionArea = document.getElementById('questionArea'), progressText = document.getElementById('progressText'), progressBar = document.getElementById('progressBar');
+    const studentNameDisplay = document.getElementById('studentNameDisplay'), studentClassDisplay = document.getElementById('studentClassDisplay');
+    const timerDisplay = document.getElementById('timerDisplay')
+    const scoreBar = document.getElementById('scoreBar');
+    const cheatOverlay = document.getElementById('cheatOverlay');
+
+    let isBlocked = false;
+    let sessionCheckInterval;
+    let studentData = {}, quizQuestions = [], userAnswers = [], currentQuestionIndex = 0;
+    let timerInterval, startTime;
+
+    window.addEventListener('load', () => {
+        let p = 0;
+        const i = setInterval(() => { p >= 100 ? (clearInterval(i), setTimeout(() => { loadingScreen.classList.add('opacity-0'), setTimeout(() => { loadingScreen.classList.add('hidden'), identityModal.classList.remove('scale-95'), identityModal.classList.add('opacity-100') }, 500) }, 300)) : (p += 5, loadingBar.style.width = `${p}%`) }, 50);
+    });
+
+    identityForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        modalError.textContent = '';
+        const submitBtn = document.getElementById('submitIdentity'), originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true; submitBtn.innerHTML = '<span>Memverifikasi...</span>';
+        
+        const name = document.getElementById('student_name').value;
+        const absen = document.getElementById('student_absen').value;
+        const studentClass = document.getElementById('student_class').value;
+        
+        try {
+            const checkResponse = await fetch('/api/check-absen', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_absen: parseInt(absen), student_class: studentClass })
+            });
+            if (!checkResponse.ok) {
+                const result = await checkResponse.json();
+                throw new Error(result.message || "Gagal memverifikasi data.");
+            }
+            studentData = { student_name: name, student_absen: parseInt(absen), student_class: studentClass };
+
+            await fetch('/api/session/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_absen: studentData.student_absen, student_class: studentData.student_class })
+            });
+            
+            studentNameDisplay.textContent = name;
+            studentClassDisplay.textContent = studentClass;
+            
+            identityModal.classList.add('opacity-0');
+            setTimeout(() => {
+                identityModal.classList.add('hidden');
+                quizContainer.classList.remove('hidden');
+                startTimer();
+                loadQuestions();
+                setupCheatingDetection();
+            }, 500);
+        } catch (error) {
+            modalError.textContent = error.message;
+            submitBtn.disabled = false; submitBtn.innerHTML = originalText;
+        }
+    });
+
+    function setupCheatingDetection() {
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                handleCheatingDetected();
+            }
+        });
+
+        document.addEventListener('copy', (e) => {
+            handleCheatingDetected();
+            e.preventDefault();
+        });
+
+        sessionCheckInterval = setInterval(checkBlockStatus, 3000);
+    }
+
+    async function handleCheatingDetected() {
+        if (isBlocked) return;
+        isBlocked = true;
+        
+        cheatOverlay.style.display = 'flex';
+
+        try {
+            await fetch('/api/session/block', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_absen: studentData.student_absen, student_class: studentData.student_class })
+            });
+        } catch (error) {
+            console.error("Gagal mengirim status blokir:", error);
+        }
+    }
+
+    async function checkBlockStatus() {
+        if (!studentData.student_absen) return;
+
+        try {
+            const response = await fetch(`/api/session/status?absen=${studentData.student_absen}&kelas=${studentData.student_class}`);
+            const data = await response.json();
+
+            if (data.status === 'blocked') {
+                if (!isBlocked) {
+                    isBlocked = true;
+                    cheatOverlay.style.display = 'flex';
+                }
+            } else if (data.status === 'active') {
+                if (isBlocked) {
+                    isBlocked = false;
+                    cheatOverlay.style.display = 'none';
+                }
+            }
+        } catch (error) {
+            console.error("Gagal mengecek status sesi:", error);
+        }
+    }
+
+    function startTimer() {
+        startTime = new Date();
+        timerInterval = setInterval(() => {
+            const diff = Math.floor((new Date() - startTime) / 1000);
+            const minutes = Math.floor(diff / 60), seconds = diff % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }, 1000);
+    }
+
+    async function loadQuestions() {
+        try {
+            const response = await fetch('/api/quiz-questions');
+            quizQuestions = await response.json();
+            if (!response.ok) throw new Error('Gagal memuat data soal.');
+            if (quizQuestions.length === 0) {
+                questionArea.innerHTML = `<div class="text-center py-10"><h3 class="text-xl font-semibold">Tidak Ada Soal</h3><p>Admin belum menambahkan soal.</p></div>`;
+                return;
+            }
+            displayCurrentQuestion();
+        } catch (error) {
+            questionArea.innerHTML = `<div class="text-center py-10"><h3 class="text-xl font-semibold">Terjadi Kesalahan</h3><p>${error.message}</p></div>`;
+        }
+    }
+
+    function displayCurrentQuestion() {
+        const question = quizQuestions[currentQuestionIndex];
+        const progressPercentage = (currentQuestionIndex / quizQuestions.length) * 100;
+        progressText.textContent = `Soal ${currentQuestionIndex + 1} dari ${quizQuestions.length}`;
+        progressBar.style.width = `${progressPercentage}%`;
+        
+        let imageHTML = '';
+        if (question.image_base64 && question.image_mimetype) {
+            const imageSrc = `data:${question.image_mimetype};base64,${question.image_base64}`;
+            imageHTML = `<div class="mb-6 overflow-hidden rounded-xl border border-gray-200"><img src="${imageSrc}" alt="Gambar Soal" class="w-full max-h-64 object-contain"></div>`;
+        }
+
+        const questionHTML = `
+            <div class="animate-fade-in">
+                ${imageHTML}
+                <p class="text-lg md:text-xl font-semibold mb-6 text-gray-800">${question.question}</p>
+                <div class="space-y-3">${Object.entries(question.options).map(([key, value]) => `
+                    <div><label class="flex items-center p-4 rounded-xl border border-gray-300 hover:bg-academic-light-blue hover:border-academic-blue cursor-pointer transition-all">
+                        <input type="radio" name="option" value="${key}" class="h-5 w-5 text-academic-blue"><span class="ml-4 text-gray-700 text-base">${value}</span>
+                    </label></div>`).join('')}
+                </div>
+            </div>`;
+        questionArea.innerHTML = questionHTML;
+        questionArea.querySelectorAll('input[name="option"]').forEach(o => o.addEventListener('change', handleAnswerSelection));
+    }
+
+    async function handleAnswerSelection(event) {
+        const selectedRadio = event.target, selectedLabel = selectedRadio.closest('label'), selectedValue = selectedRadio.value;
+        const currentQuestionId = quizQuestions[currentQuestionIndex].id;
+        
+        questionArea.querySelectorAll('input[name="option"]').forEach(opt => {
+            opt.disabled = true;
+            opt.closest('label').classList.remove('hover:bg-academic-light-blue', 'hover:border-academic-blue');
+        });
+        
+        userAnswers.push({ questionId: currentQuestionId, answer: selectedValue });
+        
+        try {
+            const response = await fetch('/api/check-answer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ questionId: currentQuestionId, userAnswer: selectedValue })
+            });
+            const result = await response.json();
+            if (result.success) {
+                if (result.isCorrect) {
+                    selectedLabel.classList.add('bg-green-100', 'border-green-500', 'ring-2', 'ring-green-200');
+                } else {
+                    selectedLabel.classList.add('bg-red-100', 'border-red-500', 'ring-2', 'ring-red-200');
+                    const correctRadio = questionArea.querySelector(`input[value="${result.correctAnswer}"]`);
+                    if (correctRadio) correctRadio.closest('label').classList.add('bg-green-100', 'border-green-500');
+                }
+            }
+        } catch (error) { console.error("Gagal memeriksa jawaban:", error); }
+        
+        setTimeout(() => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizQuestions.length) {
+                displayCurrentQuestion();
+            } else {
+                submitQuiz();
+            }
+        }, 1500);
+    }
+
+    async function submitQuiz() {
+        clearInterval(timerInterval);
+        clearInterval(sessionCheckInterval);
+        progressBar.style.width = '100%';
+        questionArea.innerHTML = `<div class="flex items-center justify-center py-16"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-academic-blue"></div><p class="ml-4">Mengirim jawaban...</p></div>`;
+        
+        const payload = { ...studentData, answers: userAnswers };
+        try {
+            const response = await fetch('/api/submit-quiz', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message);
+
+            window.location.href = `/statistik?absen=${studentData.student_absen}&kelas=${studentData.student_class}`;
+
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'Gagal Mengirim', text: error.message, confirmButtonColor: '#1e40af' });
+        }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistik Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="shortcut icon" href="https://6afuiqe8xb.ucarecd.net/278cf1a5-2273-4c27-89a9-b2f60b90e75d/shibainuwrittingonpapernoteillustrationsvgdownloadpng9803777.png" type="image/x-icon">
+
+    <style>
+        .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .loader { border-top-color: #1e40af; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+
+    <div id="mainContainer" class="container mx-auto p-4 md:p-8 max-w-4xl hidden">
+        <header class="text-center mb-8 animate-fade-in">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Hasil Quiz Anda</h1>
+            <p id="quizDate" class="text-gray-500 mt-2"></p>
+        </header>
+
+        <div id="summarySection" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-fade-in" style="animation-delay: 0.2s;">
+        </div>
+
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h2 class="text-2xl font-bold text-gray-700">Rincian Jawaban</h2>
+             <a href="/" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                Kerjakan Lagi
+            </a>
+        </div>
+
+        <div id="statisticsContainer" class="space-y-6">
+        </div>
+    </div>
+    
+    <div id="messageContainer" class="min-h-screen flex flex-col items-center justify-center text-center p-4">
+        <div id="loadingState">
+            <div class="loader ease-linear rounded-full mb-4 animate-spin"></div>
+            <h2 class="text-xl font-semibold text-gray-700">Loading...</h2>
+        </div>
+        <div id="errorState" class="hidden bg-white p-10 rounded-xl shadow-md">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <h2 class="mt-6 text-2xl font-bold text-gray-700">Gagal Memuat Data</h2>
+            <p id="errorMessage" class="text-gray-500 mt-2">Tidak dapat menemukan data untuk siswa ini.</p>
+            <a href="/quiz.html" class="mt-6 inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                Kembali ke Quiz
+            </a>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const mainContainer = document.getElementById('mainContainer');
+            const messageContainer = document.getElementById('messageContainer');
+            const loadingState = document.getElementById('loadingState');
+            const errorState = document.getElementById('errorState');
+            const errorMessage = document.getElementById('errorMessage');
+
+            const params = new URLSearchParams(window.location.search);
+            const absen = params.get('absen');
+            const kelas = params.get('kelas');
+
+            if (!absen || !kelas) {
+                loadingState.classList.add('hidden');
+                errorMessage.textContent = 'Parameter absen dan kelas tidak ditemukan di URL.';
+                errorState.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/last-submission?absen=${absen}&kelas=${kelas}`);
+                const historyData = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(historyData.message || 'Gagal mengambil data dari server.');
+                }
+                
+                loadingState.classList.add('hidden');
+                messageContainer.classList.add('hidden');
+                mainContainer.classList.remove('hidden');
+
+                const quizDateEl = document.getElementById('quizDate');
+                const summarySection = document.getElementById('summarySection');
+                const statisticsContainer = document.getElementById('statisticsContainer');
+
+                const date = new Date(historyData.date);
+                quizDateEl.textContent = `Diselesaikan pada ${date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} pukul ${date.toLocaleTimeString('id-ID')}`;
+
+                const correctAnswers = historyData.details.filter(d => d.isCorrect).length;
+                const totalQuestions = historyData.details.length;
+                
+                summarySection.innerHTML = `
+                    <div class="bg-white p-4 rounded-xl shadow-sm text-center border">
+                        <p class="text-sm text-gray-500">Nama Peserta</p>
+                        <p class="text-xl font-bold text-gray-800">${historyData.student.student_name}</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm text-center border">
+                        <p class="text-sm text-gray-500">Nilai Akhir</p>
+                        <p class="text-xl font-bold text-blue-600">${historyData.score}</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm text-center border">
+                        <p class="text-sm text-gray-500">Jawaban Benar</p>
+                        <p class="text-xl font-bold text-green-600">${correctAnswers} / ${totalQuestions}</p>
+                    </div>
+                `;
+                
+                historyData.details.forEach((detail, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white p-6 rounded-xl shadow-sm border animate-fade-in';
+                    card.style.animationDelay = `${index * 0.1}s`;
+
+                    let imageHTML = '';
+                    if (detail.image_base64 && detail.image_mimetype) {
+                        const imageSrc = `data:${detail.image_mimetype};base64,${detail.image_base64}`;
+                        imageHTML = `<div class="mb-4 overflow-hidden rounded-lg border"><img src="${imageSrc}" alt="Gambar Soal" class="w-full max-h-56 object-contain"></div>`;
+                    }
+
+                    const optionsHTML = Object.entries(detail.options).map(([key, value]) => {
+                        let stateClass = 'bg-gray-100 text-gray-700';
+                        let icon = '';
+
+                        const isCorrectAnswer = key.toLowerCase() === detail.correctAnswer.toLowerCase();
+                        const isUserAnswer = key.toLowerCase() === detail.userAnswer.toLowerCase();
+                        
+                        if (isCorrectAnswer) {
+                            stateClass = 'bg-green-100 text-green-800 ring-2 ring-green-500';
+                            icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
+                        } else if (isUserAnswer && !detail.isCorrect) {
+                            stateClass = 'bg-red-100 text-red-800 ring-2 ring-red-500';
+                            icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>`;
+                        }
+                        
+                        return `
+                            <div class="flex items-center justify-between p-3 rounded-md ${stateClass}">
+                                <span><strong class="font-mono mr-2">${key.toUpperCase()}.</strong> ${value}</span>
+                                ${icon}
+                            </div>`;
+                    }).join('');
+
+                    card.innerHTML = `
+                        <p class="text-sm font-semibold text-gray-500 mb-2">Soal #${index + 1}</p>
+                        ${imageHTML}
+                        <p class="text-lg font-medium text-gray-800 mb-4">${detail.question}</p>
+                        <div class="space-y-2">${optionsHTML}</div>
+                    `;
+                    statisticsContainer.appendChild(card);
+                });
+
+            } catch(error) {
+                loadingState.classList.add('hidden');
+                errorMessage.textContent = error.message;
+                errorState.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
